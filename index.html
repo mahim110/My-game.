@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: pink; /* Pink background */
+            color: white;
+            flex-direction: column;
+        }
+
+        #gameBoard {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background: #fff; /* White background for cells */
+            color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            border: 2px solid #444;
+            cursor: pointer;
+        }
+
+        /* Pop-up modal styles */
+        .popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .popup-content {
+            background: #001f3d; /* Navy blue background for winner popup */
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            width: 300px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .popup button {
+            background-color: #fff;
+            border: 2px solid #444;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .popup button:hover {
+            background-color: #f1c4d0;
+        }
+
+        /* Close button animation */
+        .popup.fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        /* Play Button Styles */
+        #playButton, #botButton, #twoPlayerButton {
+            background-color: #ff80ab; /* Light pink color */
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            margin: 10px;
+        }
+
+        #playButton:hover, #botButton:hover, #twoPlayerButton:hover {
+            background-color: #f1c4d0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Game mode buttons -->
+    <button id="botButton" onclick="startBotGame()">Play Against Bot</button>
+    <button id="twoPlayerButton" onclick="startTwoPlayerGame()">Play With Friend</button>
+
+    <!-- Game Board -->
+    <div id="gameBoard"></div>
+    
+    <!-- Sound effects -->
+    <audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"></audio>
+    <audio id="winSound" src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3"></audio>
+
+    <!-- Pop-up Modal -->
+    <div id="popup" class="popup">
+        <div class="popup-content">
+            <p id="winnerMessage"></p>
+            <button onclick="closePopup()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const board = document.getElementById('gameBoard');
+        const clickSound = document.getElementById('clickSound');
+        const winSound = document.getElementById('winSound');
+        const popup = document.getElementById('popup');
+        const winnerMessage = document.getElementById('winnerMessage');
+        const botButton = document.getElementById('botButton');
+        const twoPlayerButton = document.getElementById('twoPlayerButton');
+        let currentPlayer = 'X';
+        let gameState = Array(9).fill(null);
+        let isBotGame = false;
+
+        function startBotGame() {
+            botButton.style.display = 'none';
+            twoPlayerButton.style.display = 'none';
+            isBotGame = true;
+            startGame();
+        }
+
+        function startTwoPlayerGame() {
+            botButton.style.display = 'none';
+            twoPlayerButton.style.display = 'none';
+            isBotGame = false;
+            startGame();
+        }
+
+        function startGame() {
+            createBoard();
+        }
+
+        function createBoard() {
+            board.innerHTML = '';
+            gameState = Array(9).fill(null);
+            currentPlayer = 'X';
+
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', handleClick);
+                board.appendChild(cell);
+            }
+        }
+
+        function handleClick(event) {
+            const cell = event.target;
+            const index = cell.dataset.index;
+
+            if (!gameState[index]) {
+                clickSound.play(); // Click sound
+                gameState[index] = currentPlayer;
+                cell.textContent = currentPlayer;
+
+                const winner = checkWinner();
+                if (winner) {
+                    setTimeout(() => showWinner(winner), 200);  // Show winner pop-up
+                } else {
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                    if (isBotGame && currentPlayer === 'O') {
+                        botMove(); // Make bot move
+                    }
+                }
+            }
+        }
+
+        function checkWinner() {
+            const winningCombos = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+
+            for (const combo of winningCombos) {
+                const [a, b, c] = combo;
+                if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+                    return gameState[a];  // Winner found
+                }
+            }
+
+            return gameState.includes(null) ? null : 'Draw';  // If it's a draw
+        }
+
+        function showWinner(winner) {
+            if (winner === 'Draw') {
+                winnerMessage.textContent = "It's a Draw!";  // If draw
+            } else {
+                winnerMessage.textContent = `${winner} Wins!`;  // Declare winner
+                winSound.play();  // Winner sound
+            }
+            popup.classList.add('fade-in');
+            popup.style.display = 'flex';  // Show pop-up
+        }
+
+        function closePopup() {
+            popup.style.display = 'none';  // Close pop-up
+            botButton.style.display = 'block';  // Show Play Against Bot button
+            twoPlayerButton.style.display = 'block';  // Show Play With Friend button
+            createBoard();  // Reset the game
+        }
+
+        // Function for bot move with delay
+        function botMove() {
+            setTimeout(() => {  // Adding a 2-second delay before the bot makes a move
+                const emptyCells = gameState.map((cell, index) => cell === null ? index : null).filter(cell => cell !== null);
+                const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                gameState[randomIndex] = 'O';
+                const cell = document.querySelector(`[data-index='${randomIndex}']`);
+                cell.textContent = 'O';
+
+                const winner = checkWinner();
+                if (winner) {
+                    setTimeout(() => showWinner(winner), 200);  // Show winner pop-up with a short delay
+                } else {
+                    currentPlayer = 'X';  // Switch back to player 'X'
+                }
+            }, 2000); // 2-second delay before the bot makes a move
+        }
+
+    </script>
+
+</body>
+</html>
